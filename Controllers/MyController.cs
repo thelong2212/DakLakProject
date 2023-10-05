@@ -1,6 +1,6 @@
 ﻿using ExcelDataReader;
+using OfficeOpenXml;
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -34,10 +34,8 @@ namespace WebApplication5.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Index(HttpPostedFileBase upload)
         {
-
             if (ModelState.IsValid)
             {
-
                 if (upload != null && upload.ContentLength > 0)
                 {
                     Stream stream = upload.InputStream;
@@ -60,23 +58,12 @@ namespace WebApplication5.Controllers
                     int fieldcount = reader.FieldCount;
                     int rowcount = reader.RowCount;
 
-
                     DataTable dt = new DataTable();
-                    //dt.Columns.Add("UserName");
-                    //dt.Columns.Add("Adddress");
                     DataRow row;
-
-
                     DataTable dt_ = new DataTable();
                     try
                     {
-
                         dt_ = reader.AsDataSet().Tables[0];
-
-                        string ret = "";
-
-
-
                         for (int i = 0; i < dt_.Columns.Count; i++)
                         {
                             dt.Columns.Add(dt_.Rows[0][i].ToString());
@@ -123,15 +110,9 @@ namespace WebApplication5.Controllers
 
                     reader.Close();
                     reader.Dispose();
-                    // return View();
-                    //  return View(result.Tables[0]);
-
                     DataTable ddd = result.Tables[0];
-
                     Session["tmpdata"] = ddd;
-
                     return RedirectToAction("Index");
-
                 }
                 else
                 {
@@ -139,6 +120,36 @@ namespace WebApplication5.Controllers
                 }
             }
             return View();
+        }
+
+        public void DownloadExcel()
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage Ep = new ExcelPackage();
+            ExcelWorksheet Sheet = Ep.Workbook.Worksheets.Add("Report");
+            Sheet.Cells["A1"].Value = "ID";
+            Sheet.Cells["B1"].Value = "LastName";
+            int row = 2;
+            using (var _dbContext = new ApplicationDbContext())
+            {
+                var st = _dbContext.Student_test.ToList();
+                DataTable dt = new DataTable();
+                foreach (var item in st)
+                {
+
+                    Sheet.Cells[string.Format("A{0}", row)].Value = item.ID;
+                    Sheet.Cells[string.Format("B{0}", row)].Value = item.LastName;
+                    row++;
+                }
+            }
+
+            string excelName = "studentsRecord";
+            Sheet.Cells["A:AZ"].AutoFitColumns();
+            Response.Clear();
+            Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            Response.AddHeader("content-disposition", "attachment; filename=" + excelName + ".xlsx");
+            Response.BinaryWrite(Ep.GetAsByteArray());
+            Response.End();
         }
     }
 }
